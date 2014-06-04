@@ -1,0 +1,7 @@
+name = XMPP Register
+description = "Interesting forms for Ejabberd web registration module"
+core = 7.x
+version = "7.x-0.0"
+package = Curd
+
+configure = admin/config/system/xmpp

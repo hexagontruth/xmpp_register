@@ -1,0 +1,269 @@
+<?php
+
+function xmpp_register_permission() {
+  return array(
+    'administer xmpp registration' => array('title' => 'Administer XMPP Registration'),
+    'use xmpp registration' => array('title' => 'Use XMPP Registration')
+  );
+}
+
+function xmpp_register_enable() {
+  if (!variable_get('xmpp_register_hosts')) variable_set('xmpp_register_hosts', '{"localhost": "http://localhost:5280", "myfancydomain.curd": "https://myfancydomain.curd"}');
+  if (!variable_get('xmpp_register_path_new')) variable_set('xmpp_register_path_new', '/register/new');
+  if (!variable_get('xmpp_register_path_edit')) variable_set('xmpp_register_path_edit', '/register/change_password');
+  if (!variable_get('xmpp_register_path_delete')) variable_set('xmpp_register_path_delete', '/register/delete');
+}
+
+function xmpp_register_disable() {
+}
+
+function xmpp_register_menu() {
+  return array(
+    'admin/config/system/xmpp' => array(
+      'title' => 'Configure XMPP registration',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('xmpp_register_config'),
+      'access arguments' => array('administer xmpp registration'),
+      'type' => MENU_NORMAL_ITEM
+    ),
+    'xmpp/register' => array(
+      'title' => 'Create XMPP user',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('xmpp_register_new'),
+      'access arguments' => array('use xmpp registration'),
+      'type' => MENU_NORMAL_ITEM
+    ),
+    'xmpp/password' => array(
+      'title' => 'Edit XMPP user',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('xmpp_register_edit'),
+      'access arguments' => array('use xmpp registration'),
+      'type' => MENU_NORMAL_ITEM
+    ),
+    'xmpp/delete' => array(
+      'title' => 'Delete XMPP user',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('xmpp_register_delete'),
+      'access arguments' => array('use xmpp registration'),
+      'type' => MENU_NORMAL_ITEM
+    )
+  );
+}
+
+# --- Config crap
+
+function xmpp_register_config($form_state) {
+  $new = isset($form_state['values']['url_new']) ? $form_state['values']['url_new'] : variable_get('xmpp_register_new');
+  $edit = isset($form_state['values']['url_edit']) ? $form_state['values']['url_edit'] : variable_get('xmpp_register_edit');
+  $delete = isset($form_state['values']['url_delete']) ? $form_state['values']['url_delete'] : variable_get('xmpp_register_delete');
+  return array(
+    'hosts' => array(
+      '#type' => 'textarea',
+      '#title' => 'Hosts',
+      '#description' => 'Domain/host values in JSON object format.',
+      '#default_value' => variable_get('xmpp_register_hosts')
+    ),
+    'path_new' => array(
+      '#type' => 'textfield',
+      '#title' => 'New registration URL',
+      '#default_value' => variable_get('xmpp_register_path_new')
+    ),
+    'path_edit' => array(
+      '#type' => 'textfield',
+      '#title' => 'Edit registration URL',
+      '#default_value' => variable_get('xmpp_register_path_edit')
+    ),
+    'path_delete' => array(
+      '#type' => 'textfield',
+      '#title' => 'Delete registration URL',
+      '#default_value' => variable_get('xmpp_register_path_delete')
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => 'Submit'
+    )
+  );
+}
+
+function xmpp_register_config_submit($form, &$form_state) {
+  variable_set('xmpp_register_hosts', $form_state['values']['hosts']);
+  variable_set('xmpp_register_path_new', $form_state['values']['path_new']);
+  variable_set('xmpp_register_path_edit', $form_state['values']['path_edit']);
+  variable_set('xmpp_register_path_delete', $form_state['values']['path_delete']);
+  drupal_set_message('Configuration saved lol.');
+}
+
+# --- User forms
+
+function xmpp_register_new($form_state) {
+  $hosts = drupal_json_decode(variable_get('xmpp_register_hosts'));
+  $domains = array_keys($hosts);
+  
+  return array(
+    'username' => array(
+      '#type' => 'textfield',
+      '#title' => 'Username',
+      '#required' => true
+    ),
+    'domain' => array(
+      '#type' => 'select',
+      '#title' => 'Domain',
+      '#options' => array_combine($domains, $domains),
+      '#default_value' => $domains[0],
+      '#required' => true
+    ),
+    'password' => array(
+      '#type' => 'password',
+      '#title' => 'Password',
+      '#required' => true
+    ),
+    'password2' => array(
+      '#type' => 'password',
+      '#title' => 'Password confirmation',
+      '#required' => true
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => 'Create account'
+    )
+  );
+}
+
+function xmpp_register_edit($form_state) {
+  $hosts = drupal_json_decode(variable_get('xmpp_register_hosts'));
+  $domains = array_keys($hosts);
+  
+  return array(
+    'username' => array(
+      '#type' => 'textfield',
+      '#title' => 'Username',
+      '#required' => true
+    ),
+    'domain' => array(
+      '#type' => 'select',
+      '#title' => 'Domain',
+      '#options' => array_combine($domains, $domains),
+      '#default_value' => $domains[0],
+      '#required' => true
+    ),
+    'passwordold' => array(
+      '#type' => 'password',
+      '#title' => 'Existing password',
+      '#required' => true
+    ),
+    'password' => array(
+      '#type' => 'password',
+      '#title' => 'New password',
+      '#required' => true
+    ),
+    'password2' => array(
+      '#type' => 'password',
+      '#title' => 'New password confirmation',
+      '#required' => true
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => 'Change password'
+    )
+  );
+}
+
+function xmpp_register_delete($form_state) {
+  $hosts = drupal_json_decode(variable_get('xmpp_register_hosts'));
+  $domains = array_keys($hosts);
+  
+  return array(
+    'username' => array(
+      '#type' => 'textfield',
+      '#title' => 'Username',
+      '#required' => true
+    ),
+    'domain' => array(
+      '#type' => 'select',
+      '#title' => 'Domain',
+      '#options' => array_combine($domains, $domains),
+      '#default_value' => $domains[0],
+      '#required' => true
+    ),
+    'password' => array(
+      '#type' => 'password',
+      '#title' => 'Password',
+      '#required' => true
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => 'Change password'
+    )
+  );
+}
+
+# --- User form validations - could probably stand to be fleshed out a bit
+
+function xmpp_register_new_validate($form, &$form_state) {
+  if (preg_match('/\W/', $form_state['values']['username'])) {
+    form_set_error('username', 'Username must only curdtain alphanumeric characters. Too bad.');
+  }
+  if ($form_state['values']['password'] !== $form_state['values']['password2']) {
+    form_set_error('password2', 'Passwords do not match lol.');
+  }
+}
+
+function xmpp_register_edit_validate($form, &$form_state) {
+  if ($form_state['values']['password'] !== $form_state['values']['password2']) {
+    form_set_error('password2', 'Passwords do not match lol.');
+  }
+}
+
+# --- User form submission crap
+
+function xmpp_register_new_submit($form, &$form_state) {
+  $params = array(
+    'username' => $_POST['username'],
+    'password' => $_POST['password'],
+    'password2' => $_POST['password2']
+  );
+  
+  $hosts = drupal_json_decode(variable_get('xmpp_register_hosts'));
+  $url = $hosts[$_POST['domain']].variable_get('xmpp_register_path_new');
+  
+  xmpp_register_post($url, $params);
+}
+
+function xmpp_register_edit_submit($form, &$form_state) {
+  $params = array(
+    'username' => $_POST['username'],
+    'passwordold' => $_POST['passwordold'],
+    'password' => $_POST['password'],
+    'password2' => $_POST['password2']
+  );
+  
+  $hosts = drupal_json_decode(variable_get('xmpp_register_hosts'));
+  $url = $hosts[$_POST['domain']].variable_get('xmpp_register_path_edit');
+  
+  xmpp_register_post($url, $params);
+}
+
+function xmpp_register_delete_submit($form, &$form_state) {
+  $params = array(
+    'username' => $_POST['username'],
+    'password' => $_POST['password']
+  );
+  
+  $hosts = drupal_json_decode(variable_get('xmpp_register_hosts'));
+  $url = $hosts[$_POST['domain']].variable_get('xmpp_register_path_delete');
+  
+  xmpp_register_post($url, $params);
+}
+
+function xmpp_register_post($url, $params) {
+  $r = drupal_http_request($url, array(
+    'method' => 'POST',
+    'data' => http_build_query($params)
+  ));
+  if ($r->code != 200 && $r->code != 404) {
+    drupal_set_message('An error has occurred. Y not try again lol.');
+  }
+  else {
+    drupal_set_message($r->data);
+  }
+}
